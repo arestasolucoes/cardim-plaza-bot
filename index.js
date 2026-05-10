@@ -4,7 +4,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 const conversas = {};
-const CHAVE = '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';
+const CHAVE = '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';
 
 const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo.
 
