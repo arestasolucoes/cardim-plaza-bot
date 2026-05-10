@@ -3,7 +3,7 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-const conversas = {}; // memória das conversas por número
+const conversas = {};
 
 const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel, um hotel localizado em São Paulo.
 Seu nome é "Cardim", e você atende com cordialidade, profissionalismo e simpatia, usando emojis com moderação.
@@ -31,18 +31,12 @@ REGRAS IMPORTANTES:
 - Não responda sobre assuntos que não sejam relacionados ao hotel`;
 
 async function perguntarIA(numero, mensagemUsuario) {
-  // Inicializa histórico se não existir
   if (!conversas[numero]) {
     conversas[numero] = [];
   }
 
-  // Adiciona mensagem do usuário ao histórico
-  conversas[numero].push({
-    role: 'user',
-    content: mensagemUsuario
-  });
+  conversas[numero].push({ role: 'user', content: mensagemUsuario });
 
-  // Limita histórico a 20 mensagens para não estourar tokens
   if (conversas[numero].length > 20) {
     conversas[numero] = conversas[numero].slice(-20);
   }
@@ -63,51 +57,49 @@ async function perguntarIA(numero, mensagemUsuario) {
   });
 
   const data = await response.json();
-  const respostaIA = data.content[0].text;
 
-  // Adiciona resposta da IA ao histórico
-  conversas[numero].push({
-    role: 'assistant',
-    content: respostaIA
-  });
+  console.log('Status API:', response.status);
+  console.log('Resposta API:', JSON.stringify(data).substring(0, 300));
+
+  if (data.error) {
+    throw new Error('Erro da API: ' + data.error.message);
+  }
+
+  if (!data.content || !data.content[0] || !data.content[0].text) {
+    throw new Error('Resposta inesperada: ' + JSON.stringify(data));
+  }
+
+  const respostaIA = data.content[0].text;
+  conversas[numero].push({ role: 'assistant', content: respostaIA });
 
   return respostaIA;
 }
 
-// Webhook que o Twilio chama quando chega mensagem
 app.post('/webhook', async (req, res) => {
   const mensagem = req.body.Body;
   const numero = req.body.From;
 
-  console.log(`📩 Mensagem de ${numero}: ${mensagem}`);
+  console.log(`Mensagem de ${numero}: ${mensagem}`);
 
   try {
     const resposta = await perguntarIA(numero, mensagem);
-    console.log(`🤖 Resposta: ${resposta}`);
+    console.log(`Resposta: ${resposta}`);
 
-    // Resposta no formato TwiML que o Twilio entende
     res.set('Content-Type', 'text/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>${resposta}</Message>
-</Response>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${resposta}</Message></Response>`);
 
   } catch (error) {
-    console.error('Erro:', error);
+    console.error('Erro:', error.message);
     res.set('Content-Type', 'text/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>Olá! Estamos com uma instabilidade momentânea. Por favor, tente novamente em instantes. 😊</Message>
-</Response>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Olá! Estamos com uma instabilidade momentânea. Por favor, tente novamente em instantes. 😊</Message></Response>`);
   }
 });
 
-// Rota de verificação se o servidor está online
 app.get('/', (req, res) => {
-  res.send('🤖 Robô Cardim Plaza online!');
+  res.send('Robô Cardim Plaza online!');
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
