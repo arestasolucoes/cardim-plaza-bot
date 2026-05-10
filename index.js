@@ -4,65 +4,54 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 const conversas = {};
-const CHAVE = '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';
 
-const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo.
-
-INFORMAÇÕES:
-- Check-in: a partir das 14h00
-- Check-out: até as 12h00
-- Café da manhã: incluso, servido das 06h30 às 10h00
-- Estacionamento: R$35,00 por diária
-- Wi-Fi: gratuito
-- Pets: não aceitos
-- Pagamento: PIX e cartão
-
-RESERVAS: Quando perguntarem sobre disponibilidade, peça check-in e check-out e responda com o link:
-https://book.omnibees.com/hotel/18555?checkIn=DATA_ENTRADA&checkOut=DATA_SAIDA&currencyId=16&lang=pt-BR
-
-Se não souber responder diga: Vou verificar com nossa equipe, um atendente responderá em breve.`;
-
-async function perguntarIA(numero, mensagem) {
-  if (!conversas[numero]) conversas[numero] = [];
-  conversas[numero].push({ role: 'user', content: mensagem });
-  if (conversas[numero].length > 20) conversas[numero] = conversas[numero].slice(-20);
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': CHAVE,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: conversas[numero]
-    })
-  });
-
-  const data = await response.json();
-  console.log('Status:', response.status, JSON.stringify(data).substring(0, 200));
-  if (data.error) throw new Error(data.error.message);
-  const resposta = data.content[0].text;
-  conversas[numero].push({ role: 'assistant', content: resposta });
-  return resposta;
+function responderSemIA(mensagem) {
+  const msg = mensagem.toLowerCase();
+  
+  if (msg.includes('check-in') || msg.includes('checkin') || msg.includes('entrada')) {
+    return 'Olá! 😊 O check-in no Cardim Plaza é a partir das 14h00. Posso ajudar com mais alguma informação?';
+  }
+  if (msg.includes('check-out') || msg.includes('checkout') || msg.includes('saída') || msg.includes('saida')) {
+    return 'O check-out deve ser realizado até as 12h00. Posso ajudar com mais alguma informação? 😊';
+  }
+  if (msg.includes('café') || msg.includes('cafe') || msg.includes('café da manhã') || msg.includes('breakfast')) {
+    return 'O café da manhã está incluso na diária e é servido das 06h30 às 10h00. 😊';
+  }
+  if (msg.includes('estacionamento') || msg.includes('carro') || msg.includes('vaga')) {
+    return 'Temos estacionamento disponível por R$35,00 por diária. 🚗';
+  }
+  if (msg.includes('wifi') || msg.includes('wi-fi') || msg.includes('internet')) {
+    return 'O Wi-Fi é gratuito para todos os hóspedes! 😊';
+  }
+  if (msg.includes('pet') || msg.includes('cachorro') || msg.includes('gato') || msg.includes('animal')) {
+    return 'Infelizmente não aceitamos pets em nossa hospedagem.';
+  }
+  if (msg.includes('pagamento') || msg.includes('pagar') || msg.includes('pix') || msg.includes('cartão') || msg.includes('cartao')) {
+    return 'Aceitamos PIX e cartão de crédito/débito. 😊';
+  }
+  if (msg.includes('reserva') || msg.includes('disponib') || msg.includes('quarto') || msg.includes('hospedagem')) {
+    return 'Para verificar disponibilidade e fazer sua reserva, clique no link: 🔗 https://book.omnibees.com/hotel/18555?currencyId=16&lang=pt-BR\n\nSe preferir, me informe a data de entrada e saída que envio o link direto!';
+  }
+  if (msg.match(/\d{1,2}[\/\-]\d{1,2}/) || msg.includes('janeiro') || msg.includes('fevereiro') || msg.includes('março') || msg.includes('abril') || msg.includes('maio') || msg.includes('junho') || msg.includes('julho') || msg.includes('agosto') || msg.includes('setembro') || msg.includes('outubro') || msg.includes('novembro') || msg.includes('dezembro')) {
+    return 'Para verificar disponibilidade nessas datas, acesse: 🔗 https://book.omnibees.com/hotel/18555?currencyId=16&lang=pt-BR\n\nClique no link e insira as datas para ver os quartos disponíveis!';
+  }
+  if (msg.includes('oi') || msg.includes('olá') || msg.includes('ola') || msg.includes('bom dia') || msg.includes('boa tarde') || msg.includes('boa noite') || msg.includes('hello')) {
+    return 'Olá! Seja bem-vindo ao Cardim Plaza Hotel! 😊\n\nPosso ajudar com:\n• Informações sobre check-in e check-out\n• Café da manhã\n• Estacionamento\n• Wi-Fi\n• Reservas\n\nComo posso ajudar?';
+  }
+  
+  return 'Obrigado pelo contato! Para mais informações ou reservas, acesse: 🔗 https://book.omnibees.com/hotel/18555?currencyId=16&lang=pt-BR\n\nOu aguarde que um de nossos atendentes irá lhe responder em breve. 😊';
 }
 
 app.post('/webhook', async (req, res) => {
-  const mensagem = req.body.Body;
+  const mensagem = req.body.Body || '';
   const numero = req.body.From;
   console.log(`Mensagem de ${numero}: ${mensagem}`);
-  try {
-    const resposta = await perguntarIA(numero, mensagem);
-    res.set('Content-Type', 'text/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${resposta}</Message></Response>`);
-  } catch (error) {
-    console.error('Erro:', error.message);
-    res.set('Content-Type', 'text/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Instabilidade momentânea. Tente novamente.</Message></Response>`);
-  }
+  
+  const resposta = responderSemIA(mensagem);
+  console.log(`Resposta: ${resposta}`);
+  
+  res.set('Content-Type', 'text/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${resposta}</Message></Response>`);
 });
 
 app.get('/', (req, res) => res.send('Robo Cardim Plaza online!'));
