@@ -4,6 +4,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 const conversas = {};
+const CHAVE = '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';
 
 const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo.
 
@@ -30,7 +31,7 @@ async function perguntarIA(numero, mensagem) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY.trim(),
+      'x-api-key': CHAVE,
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
@@ -43,7 +44,6 @@ async function perguntarIA(numero, mensagem) {
 
   const data = await response.json();
   console.log('Status:', response.status, JSON.stringify(data).substring(0, 200));
-
   if (data.error) throw new Error(data.error.message);
   const resposta = data.content[0].text;
   conversas[numero].push({ role: 'assistant', content: resposta });
@@ -65,7 +65,6 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.send('Robô Cardim Plaza online!'));
-
+app.get('/', (req, res) => res.send('Robo Cardim Plaza online!'));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
