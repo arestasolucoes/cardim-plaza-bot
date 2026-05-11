@@ -6,7 +6,7 @@ app.use(express.json());
 const conversas = {};
 const ultimaMensagem = {};
 
-const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo usando emojis com moderação.
+const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo.
 
 INFORMAÇÕES DO HOTEL:
 - Endereço: Rua Maestro Cardim, 508 - Bela Vista, São Paulo/SP
@@ -19,8 +19,8 @@ INFORMAÇÕES DO HOTEL:
 - Formas de pagamento: PIX e cartão de crédito/débito
 
 HOSPITAIS PRÓXIMOS:
-- Hospital Paulistano: 50 metros (praticamente na porta do hotel)
-- Hospital Beneficência Portuguesa: 100 metros (praticamente na porta do hotel)
+- Hospital Paulistano: 50 metros
+- Hospital Beneficência Portuguesa: 100 metros
 - Hospital AC Camargo Cancer Center: 500 metros (6 minutos a pé)
 - Hospital Alemão Oswaldo Cruz: 500 metros (6 minutos a pé)
 
@@ -29,65 +29,66 @@ METRÔ PRÓXIMO:
 - Estação São Joaquim (Linha 1 - Azul): 7 minutos a pé
 
 AEROPORTOS:
-- Aeroporto de Congonhas (voos domésticos): 8 km, 15 minutos de carro ou Uber
-- Aeroporto de Guarulhos (voos internacionais e domésticos): 40 km, 40 a 60 minutos de carro. Opção econômica: metrô Linha 1 até a Estação Luz mais Expresso Aeroporto (R$5,20)
+- Aeroporto de Congonhas: 8 km, 15 minutos de carro
+- Aeroporto de Guarulhos: 40 km, 40 a 60 minutos de carro
 
 RODOVIÁRIAS:
-- Terminal Rodoviário do Tietê: 8 km, 20 minutos de carro. Opção econômica: metrô Linha 1 até Estação Tietê
-- Terminal Rodoviário da Barra Funda: 10 km, 20 minutos de carro. Opção econômica: metrô Linha 1 até Estação Barra Funda
-- Terminal Rodoviário do Jabaquara: 12 km, 25 minutos de carro. Opção econômica: metrô Linha 1 até Estação Jabaquara
+- Terminal Tietê: 8 km, 20 minutos de carro
+- Terminal Barra Funda: 10 km, 20 minutos de carro
+- Terminal Jabaquara: 12 km, 25 minutos de carro
 
-PONTOS TURÍSTICOS PRÓXIMOS:
-- Avenida Paulista: 1,5 km (15 minutos a pé ou 5 minutos de metrô)
+PONTOS TURÍSTICOS:
+- Avenida Paulista: 1,5 km (15 minutos a pé)
 - Bairro da Liberdade: 800 metros (10 minutos a pé)
 - Parque Ibirapuera: 2,8 km (10 minutos de carro)
 - MASP: 2,6 km (10 minutos de carro)
-- Bixiga (Bela Vista): 300 metros (5 minutos a pé)
-- Parque Trianon: 2,3 km (10 minutos de carro)
-- Parque da Independência: 3,5 km (15 minutos de carro)
-- Frei Caneca Shopping: 1,7 km (8 minutos de carro)
-- Casa das Rosas: 1 km (12 minutos a pé)
+- Bixiga: 300 metros (5 minutos a pé)
 
 RESTAURANTES PRÓXIMOS:
-
-Na Rua do Hotel (Rua Maestro Cardim):
-- Japa's: culinária brasileira/japonesa - Rua Maestro Cardim, 332 (100m do hotel)
-- Casa do Pao de Queijo: lanches e cafe - Rua Maestro Cardim, 769 (200m do hotel)
-- Bonjardim Restaurante: culinaria brasileira - Rua Maestro Cardim, 407 (100m do hotel)
-
-Bixiga/Bela Vista (5 a 10 minutos a pe):
-- Famiglia Mancini: italiano premiado - Rua Avanhandava, 81
-- Pizzaria Speranza: pizza tradicional desde 1958 - Rua Treze de Maio, 1004
-- Cantina Lazzarella: italiano com musica ao vivo aos sabados - Rua Treze de Maio, 589
-- Osteria Generale: italiano, famoso pelo nhoque - Rua Dr. Fausto Ferraz, 163
-- Mexilhao: frutos do mar - Rua Treze de Maio, 626
-- Templo da Carne Marcos Bassi: churrascaria sofisticada - Rua Treze de Maio, 668
-- Cantina C Que Sabe: italiano desde 1931 - Rua Rui Barbosa, 192
-- Amazonia Casa Brasileira: culinaria paraense - Rua Rui Barbosa, 218
-- Coco Bambu Conceito: frutos do mar - Patio Paulista (600m do hotel)
-
-Bairro da Liberdade (10 minutos a pe):
-- Diversas opcoes de culinaria japonesa, chinesa e coreana na Rua Galvao Bueno
-
-Avenida Paulista (15 minutos a pe ou 5 minutos de metro):
-- Cafe Creme: cafe e refeicoes desde 1988 - Av. Paulista, 807
-- Cafe Mestico: culinaria asiatica - Av. Paulista, 508
+- Japa's: Rua Maestro Cardim, 332 (100m)
+- Bonjardim: Rua Maestro Cardim, 407 (100m)
+- Famiglia Mancini: Rua Avanhandava, 81 (italiano premiado)
+- Pizzaria Speranza: Rua Treze de Maio, 1004 (desde 1958)
+- Cantina Lazzarella: Rua Treze de Maio, 589 (música ao vivo aos sábados)
+- Templo da Carne Marcos Bassi: Rua Treze de Maio, 668
+- Osteria Generale: Rua Dr. Fausto Ferraz, 163
 
 REGRAS PARA RESERVAS:
-Quando o hospede informar as datas, gere o link substituindo as datas no formato DD-MM-YYYY.
-Exemplo: check-in 16/05 e check-out 18/05:
-https://book.omnibees.com/hotel/18555?checkIn=16-05-2026&checkOut=18-05-2026&currencyId=16&lang=pt-BR
+Quando o hóspede informar datas de check-in e check-out, responda com o link:
+https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR
+Substitua DD-MM-YYYY pelas datas informadas.
 
-Responda assim quando tiver as datas:
-Acesse o link para ver disponibilidade e reservar: https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR
+REGRAS GERAIS:
+- Seja educado e simpático
+- Respostas curtas e diretas
+- Nunca invente informações
+- Se não souber, diga: Aguarde, um atendente responderá em breve.`;
 
-OUTRAS REGRAS:
-- Seja educado, formal e simpatico
-- Use no maximo 1 emoji por mensagem
-- Nunca invente informacoes
-- Se nao souber responder diga: Aguarde um momento, um atendente ira lhe responder em breve.
-- Nao responda sobre assuntos nao relacionados ao hotel
-- Mantenha respostas CURTAS e DIRETAS`;
+async function enviarMensagem(para, texto) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const de = process.env.TWILIO_WHATSAPP_NUMBER;
+
+  const credentials = Buffer.from(accountSid + ':' + authToken).toString('base64');
+
+  const body = new URLSearchParams();
+  body.append('From', 'whatsapp:' + de);
+  body.append('To', para);
+  body.append('Body', texto);
+
+  const response = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + accountSid + '/Messages.json', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + credentials,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: body.toString()
+  });
+
+  const data = await response.json();
+  console.log('Twilio envio:', response.status, JSON.stringify(data).substring(0, 200));
+  return data;
+}
 
 async function perguntarIA(numero, mensagem) {
   if (!conversas[numero]) conversas[numero] = [];
@@ -110,7 +111,7 @@ async function perguntarIA(numero, mensagem) {
   });
 
   const data = await response.json();
-  console.log('Status:', response.status, JSON.stringify(data).substring(0, 200));
+  console.log('Status API:', response.status, JSON.stringify(data).substring(0, 200));
   if (data.error) throw new Error(data.error.message);
   const resposta = data.content[0].text;
   conversas[numero].push({ role: 'assistant', content: resposta });
@@ -122,16 +123,13 @@ app.post('/webhook', async (req, res) => {
   const numero = req.body.From || '';
   console.log('Mensagem de ' + numero + ': ' + mensagem);
 
+  res.status(200).send('OK');
+
   if (ultimaMensagem[numero]) clearTimeout(ultimaMensagem[numero]);
 
   ultimaMensagem[numero] = setTimeout(async () => {
     try {
-      const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      await twilio.messages.create({
-        from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER,
-        to: numero,
-        body: 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar.'
-      });
+      await enviarMensagem(numero, 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar. 😊');
     } catch(e) {
       console.error('Erro proativa:', e.message);
     }
@@ -141,14 +139,10 @@ app.post('/webhook', async (req, res) => {
   try {
     const resposta = await perguntarIA(numero, mensagem);
     console.log('Resposta: ' + resposta);
-    res.set('Content-Type', 'text/xml');
-    res.type('text/xml');
-    const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message><![CDATA[${resposta}]]></Message></Response>`;
-    res.send(xml);
+    await enviarMensagem(numero, resposta);
   } catch(e) {
     console.error('Erro:', e.message);
-    res.set('Content-Type', 'text/xml');
-    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>Instabilidade momentanea. Tente novamente.</Message></Response>');
+    await enviarMensagem(numero, 'Instabilidade momentanea. Tente novamente.');
   }
 });
 
