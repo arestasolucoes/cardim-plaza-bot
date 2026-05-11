@@ -17,27 +17,20 @@ INFORMAÇÕES DO HOTEL:
 - Formas de pagamento: PIX e cartão de crédito/débito
 
 REGRAS PARA RESERVAS:
-Quando o hóspede informar as datas (mesmo que na mesma mensagem ou em mensagens separadas), gere IMEDIATAMENTE o link no formato abaixo, substituindo as datas no formato DD-MM-YYYY:
-https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR
+Quando o hóspede informar as datas, gere o link substituindo as datas no formato DD-MM-YYYY.
+Exemplo: check-in 16/05 e check-out 18/05 vira:
+https://book.omnibees.com/hotel/18555?checkIn=16-05-2026&checkOut=18-05-2026&currencyId=16&lang=pt-BR
 
-Exemplos de como o hóspede pode informar as datas:
-- "14/05 a 16/05" → checkIn=14-05-2026&checkOut=16-05-2026
-- "14 a 16 de maio" → checkIn=14-05-2026&checkOut=16-05-2026
-- "14/05/2026 a 16/05/2026" → checkIn=14-05-2026&checkOut=16-05-2026
-- Se o ano não for informado, use 2026
-
-Quando tiver as duas datas, responda assim:
-"Ótimo! Veja os quartos disponíveis para o período de [DATA ENTRADA] a [DATA SAÍDA]:
-🔗 https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR
-
-Clique no link para ver as opções e finalizar sua reserva! 😊"
+Responda APENAS assim quando tiver as datas, sem texto adicional:
+"Acesse o link para ver disponibilidade e reservar: https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR"
 
 OUTRAS REGRAS:
 - Seja educado, formal e simpático
-- Use no máximo 1-2 emojis por mensagem
+- Use no máximo 1 emoji por mensagem
 - Nunca invente informações
-- Se não souber responder, diga: "Vou verificar essa informação com nossa equipe. Por favor, aguarde um momento que um de nossos atendentes irá lhe responder em breve. 😊"
-- Não responda sobre assuntos não relacionados ao hotel`;
+- Se não souber responder diga: "Aguarde um momento, um atendente irá lhe responder em breve."
+- Não responda sobre assuntos não relacionados ao hotel
+- Mantenha respostas CURTAS e DIRETAS`;
 
 async function perguntarIA(numero, mensagem) {
   if (!conversas[numero]) conversas[numero] = [];
@@ -53,7 +46,7 @@ async function perguntarIA(numero, mensagem) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 512,
       system: SYSTEM_PROMPT,
       messages: conversas[numero]
     })
@@ -73,15 +66,6 @@ app.post('/webhook', async (req, res) => {
   console.log('Mensagem de ' + numero + ': ' + mensagem);
   try {
     const resposta = await perguntarIA(numero, mensagem);
+    console.log('Resposta: ' + resposta);
     res.set('Content-Type', 'text/xml');
-    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>' + resposta + '</Message></Response>');
-  } catch(e) {
-    console.error('Erro:', e.message);
-    res.set('Content-Type', 'text/xml');
-    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>Olá! Estamos com instabilidade. Tente novamente em instantes. 😊</Message></Response>');
-  }
-});
-
-app.get('/', (req, res) => res.send('Robo Cardim Plaza online!'));
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Servidor rodando na porta ' + PORT));
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>' + resposta + '</M
