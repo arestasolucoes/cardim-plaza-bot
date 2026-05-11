@@ -20,6 +20,7 @@ INFORMAÇÕES DO HOTEL:
 - Wi-Fi: gratuito para todos os hóspedes
 - Pets: não são aceitos
 - Formas de pagamento: PIX e cartão de crédito/débito
+- Recepção 24 horas
 
 HOSPITAIS PRÓXIMOS:
 - Hospital Paulistano: 50 metros
