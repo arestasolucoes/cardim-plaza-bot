@@ -1,10 +1,13 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 const conversas = {};
 const ultimaMensagem = {};
+const historicoParaPainel = {};
 
 const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo.
 
@@ -49,46 +52,47 @@ RESTAURANTES PRÓXIMOS:
 - Bonjardim: Rua Maestro Cardim, 407 (100m)
 - Famiglia Mancini: Rua Avanhandava, 81 (italiano premiado)
 - Pizzaria Speranza: Rua Treze de Maio, 1004 (desde 1958)
-- Cantina Lazzarella: Rua Treze de Maio, 589 (música ao vivo aos sábados)
+- Cantina Lazzarella: Rua Treze de Maio, 589 (musica ao vivo aos sabados)
 - Templo da Carne Marcos Bassi: Rua Treze de Maio, 668
 - Osteria Generale: Rua Dr. Fausto Ferraz, 163
 
 REGRAS PARA RESERVAS:
-Quando o hóspede informar datas de check-in e check-out, responda EXATAMENTE assim, substituindo as datas que ele informou:
-
-"Perfeito! Acesse o link abaixo e selecione as datas de DATA_ENTRADA a DATA_SAIDA para ver disponibilidade e reservar:
+Quando o hospede informar datas de check-in e check-out, responda EXATAMENTE assim, substituindo as datas que ele informou:
+Perfeito! Acesse o link abaixo e selecione as datas de DATA_ENTRADA a DATA_SAIDA para ver disponibilidade e reservar:
 https://book.omnibees.com/hotel/18555?currencyId=16&lang=pt-BR
-
-Qualquer dúvida estamos à disposição!"
+Qualquer duvida estamos a disposicao!
 
 REGRAS GERAIS:
-- Seja educado e simpático
+- Seja educado e simpatico
 - Respostas curtas e diretas
-- Nunca invente informações
-- Se não souber, diga: Aguarde, um atendente responderá em breve.
-- Não responda sobre assuntos não relacionados ao hotel`;
+- Nunca invente informacoes
+- Se nao souber, diga: Aguarde, um atendente respondera em breve.
+- Nao responda sobre assuntos nao relacionados ao hotel`;
+
+function getHora() {
+  const agora = new Date();
+  return agora.getHours().toString().padStart(2,'0') + ':' + agora.getMinutes().toString().padStart(2,'0');
+}
+
+function salvarNoPainel(numero, role, content) {
+  if (!historicoParaPainel[numero]) historicoParaPainel[numero] = [];
+  historicoParaPainel[numero].push({ role, content, hora: getHora() });
+}
 
 async function enviarMensagem(para, texto) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const de = process.env.TWILIO_WHATSAPP_NUMBER;
-
   const credentials = Buffer.from(accountSid + ':' + authToken).toString('base64');
-
   const body = new URLSearchParams();
   body.append('From', 'whatsapp:' + de);
   body.append('To', para);
   body.append('Body', texto);
-
   const response = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + accountSid + '/Messages.json', {
     method: 'POST',
-    headers: {
-      'Authorization': 'Basic ' + credentials,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
+    headers: { 'Authorization': 'Basic ' + credentials, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString()
   });
-
   const data = await response.json();
   console.log('Twilio envio:', response.status, JSON.stringify(data).substring(0, 200));
   return data;
@@ -98,22 +102,11 @@ async function perguntarIA(numero, mensagem) {
   if (!conversas[numero]) conversas[numero] = [];
   conversas[numero].push({ role: 'user', content: mensagem });
   if (conversas[numero].length > 20) conversas[numero] = conversas[numero].slice(-20);
-
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      system: SYSTEM_PROMPT,
-      messages: conversas[numero]
-    })
+    headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 512, system: SYSTEM_PROMPT, messages: conversas[numero] })
   });
-
   const data = await response.json();
   console.log('Status API:', response.status, JSON.stringify(data).substring(0, 200));
   if (data.error) throw new Error(data.error.message);
@@ -122,27 +115,36 @@ async function perguntarIA(numero, mensagem) {
   return resposta;
 }
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'painel.html'));
+});
+
+app.get('/conversas', (req, res) => {
+  res.json(historicoParaPainel);
+});
+
 app.post('/webhook', async (req, res) => {
   const mensagem = req.body.Body || '';
   const numero = req.body.From || '';
   console.log('Mensagem de ' + numero + ': ' + mensagem);
 
+  salvarNoPainel(numero, 'user', mensagem);
   res.status(200).send('OK');
 
   if (ultimaMensagem[numero]) clearTimeout(ultimaMensagem[numero]);
-
   ultimaMensagem[numero] = setTimeout(async () => {
     try {
-      await enviarMensagem(numero, 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar. Sera um prazer recebe-lo no Cardim Plaza Hotel!');
-    } catch(e) {
-      console.error('Erro proativa:', e.message);
-    }
+      const txt = 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar. Sera um prazer recebe-lo no Cardim Plaza Hotel!';
+      await enviarMensagem(numero, txt);
+      salvarNoPainel(numero, 'assistant', txt);
+    } catch(e) { console.error('Erro proativa:', e.message); }
     delete ultimaMensagem[numero];
   }, 5 * 60 * 1000);
 
   try {
     const resposta = await perguntarIA(numero, mensagem);
     console.log('Resposta: ' + resposta);
+    salvarNoPainel(numero, 'assistant', resposta);
     await enviarMensagem(numero, resposta);
   } catch(e) {
     console.error('Erro:', e.message);
@@ -150,6 +152,5 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.send('Robo Cardim Plaza online!'));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Servidor rodando na porta ' + PORT));
