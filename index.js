@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
@@ -8,6 +7,7 @@ app.use(express.json());
 const conversas = {};
 const ultimaMensagem = {};
 const historicoParaPainel = {};
+const modosHumanos = {};
 
 const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo.
 
@@ -57,7 +57,7 @@ RESTAURANTES PRÓXIMOS:
 - Osteria Generale: Rua Dr. Fausto Ferraz, 163
 
 REGRAS PARA RESERVAS:
-Quando o hospede informar datas de check-in e check-out, responda EXATAMENTE assim, substituindo as datas que ele informou:
+Quando o hospede informar datas de check-in e check-out, responda EXATAMENTE assim:
 Perfeito! Acesse o link abaixo e selecione as datas de DATA_ENTRADA a DATA_SAIDA para ver disponibilidade e reservar:
 https://book.omnibees.com/hotel/18555?currencyId=16&lang=pt-BR
 Qualquer duvida estamos a disposicao!
@@ -120,7 +120,29 @@ app.get('/', (req, res) => {
 });
 
 app.get('/conversas', (req, res) => {
-  res.json(historicoParaPainel);
+  res.json({ historico: historicoParaPainel, modosHumanos });
+});
+
+app.post('/modo-humano', (req, res) => {
+  const { numero, ativo } = req.body;
+  if (ativo) {
+    modosHumanos[numero] = true;
+  } else {
+    delete modosHumanos[numero];
+  }
+  console.log('Modo humano ' + (ativo ? 'ATIVADO' : 'DESATIVADO') + ' para ' + numero);
+  res.json({ ok: true });
+});
+
+app.post('/enviar-humano', async (req, res) => {
+  const { numero, texto } = req.body;
+  try {
+    await enviarMensagem(numero, texto);
+    salvarNoPainel(numero, 'humano', texto);
+    res.json({ ok: true });
+  } catch(e) {
+    res.json({ ok: false, erro: e.message });
+  }
 });
 
 app.post('/webhook', async (req, res) => {
@@ -131,8 +153,14 @@ app.post('/webhook', async (req, res) => {
   salvarNoPainel(numero, 'user', mensagem);
   res.status(200).send('OK');
 
+  if (modosHumanos[numero]) {
+    console.log('Modo humano ativo para ' + numero + ' — robô não responde');
+    return;
+  }
+
   if (ultimaMensagem[numero]) clearTimeout(ultimaMensagem[numero]);
   ultimaMensagem[numero] = setTimeout(async () => {
+    if (modosHumanos[numero]) return;
     try {
       const txt = 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar. Sera um prazer recebe-lo no Cardim Plaza Hotel!';
       await enviarMensagem(numero, txt);
