@@ -18,17 +18,17 @@ INFORMAÇÕES DO HOTEL:
 
 REGRAS PARA RESERVAS:
 Quando o hóspede informar as datas, gere o link substituindo as datas no formato DD-MM-YYYY.
-Exemplo: check-in 16/05 e check-out 18/05 vira:
+Exemplo: check-in 16/05 e check-out 18/05:
 https://book.omnibees.com/hotel/18555?checkIn=16-05-2026&checkOut=18-05-2026&currencyId=16&lang=pt-BR
 
-Responda APENAS assim quando tiver as datas, sem texto adicional:
-"Acesse o link para ver disponibilidade e reservar: https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR"
+Responda assim quando tiver as datas:
+Acesse o link para ver disponibilidade e reservar: https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR
 
 OUTRAS REGRAS:
 - Seja educado, formal e simpático
 - Use no máximo 1 emoji por mensagem
 - Nunca invente informações
-- Se não souber responder diga: "Aguarde um momento, um atendente irá lhe responder em breve."
+- Se não souber responder diga: Aguarde um momento, um atendente irá lhe responder em breve.
 - Não responda sobre assuntos não relacionados ao hotel
 - Mantenha respostas CURTAS e DIRETAS`;
 
@@ -60,6 +60,15 @@ async function perguntarIA(numero, mensagem) {
   return resposta;
 }
 
+function escaparXML(texto) {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 app.post('/webhook', async (req, res) => {
   const mensagem = req.body.Body || '';
   const numero = req.body.From || '';
@@ -67,5 +76,16 @@ app.post('/webhook', async (req, res) => {
   try {
     const resposta = await perguntarIA(numero, mensagem);
     console.log('Resposta: ' + resposta);
+    const respostaSegura = escaparXML(resposta);
     res.set('Content-Type', 'text/xml');
-    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>' + resposta + '</M
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>' + respostaSegura + '</Message></Response>');
+  } catch(e) {
+    console.error('Erro:', e.message);
+    res.set('Content-Type', 'text/xml');
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>Instabilidade momentanea. Tente novamente.</Message></Response>');
+  }
+});
+
+app.get('/', (req, res) => res.send('Robo Cardim Plaza online!'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Servidor rodando na porta ' + PORT));
