@@ -4,10 +4,12 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 const conversas = {};
+const ultimaMensagem = {};
 
 const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo usando emojis com moderação.
 
 INFORMAÇÕES DO HOTEL:
+- Endereço: Rua Maestro Cardim, 508 - Bela Vista, São Paulo/SP
 - Check-in: a partir das 14h00
 - Check-out: até as 12h00
 - Café da manhã: incluso na diária, servido das 06h30 às 10h00
@@ -16,8 +18,63 @@ INFORMAÇÕES DO HOTEL:
 - Pets: não são aceitos
 - Formas de pagamento: PIX e cartão de crédito/débito
 
+HOSPITAIS PRÓXIMOS:
+- Hospital Paulistano: 50 metros (praticamente na porta do hotel)
+- Hospital Beneficência Portuguesa: 100 metros (praticamente na porta do hotel)
+- Hospital AC Camargo Cancer Center: 500 metros (6 minutos a pé)
+- Hospital Alemão Oswaldo Cruz: 500 metros (6 minutos a pé)
+
+METRÔ PRÓXIMO:
+- Estação Vergueiro (Linha 1 - Azul): 5 minutos a pé
+- Estação São Joaquim (Linha 1 - Azul): 7 minutos a pé
+
+AEROPORTOS:
+- Aeroporto de Congonhas (voos domésticos): 8 km, 15 minutos de carro ou Uber
+- Aeroporto de Guarulhos (voos internacionais e domésticos): 40 km, 40 a 60 minutos de carro. Opção econômica: metrô Linha 1 até a Estação Luz + Expresso Aeroporto (R$5,20)
+
+RODOVIÁRIAS:
+- Terminal Rodoviário do Tietê (maior rodoviária da América Latina): 8 km, 20 minutos de carro. Opção econômica: metrô Linha 1 até Estação Tietê
+- Terminal Rodoviário da Barra Funda: 10 km, 20 minutos de carro. Opção econômica: metrô Linha 1 até Estação Barra Funda
+- Terminal Rodoviário do Jabaquara (ônibus para o litoral): 12 km, 25 minutos de carro. Opção econômica: metrô Linha 1 até Estação Jabaquara
+
+PONTOS TURÍSTICOS PRÓXIMOS:
+- Avenida Paulista: 1,5 km (15 minutos a pé ou 5 minutos de metrô)
+- Bairro da Liberdade: 800 metros (10 minutos a pé)
+- Parque Ibirapuera: 2,8 km (10 minutos de carro)
+- MASP: 2,6 km (10 minutos de carro)
+- Bixiga (Bela Vista): 300 metros (5 minutos a pé)
+- Parque Trianon: 2,3 km (10 minutos de carro)
+- Parque da Independência: 3,5 km (15 minutos de carro)
+- Frei Caneca Shopping: 1,7 km (8 minutos de carro)
+- Casa das Rosas: 1 km (12 minutos a pé)
+
+RESTAURANTES PRÓXIMOS:
+
+Na Rua do Hotel (Rua Maestro Cardim):
+- Japa's: culinária brasileira/japonesa - Rua Maestro Cardim, 332 (100m do hotel)
+- Casa do Pao de Queijo: lanches e cafe - Rua Maestro Cardim, 769 (200m do hotel)
+- Bonjardim Restaurante: culinaria brasileira - Rua Maestro Cardim, 407 (100m do hotel)
+
+Bixiga/Bela Vista (5 a 10 minutos a pe):
+- Famiglia Mancini: italiano premiado - Rua Avanhandava, 81
+- Pizzaria Speranza: pizza tradicional desde 1958 - Rua Treze de Maio, 1004
+- Cantina Lazzarella: italiano com musica ao vivo aos sabados - Rua Treze de Maio, 589
+- Osteria Generale: italiano, famoso pelo nhoque - Rua Dr. Fausto Ferraz, 163
+- Mexilhao: frutos do mar - Rua Treze de Maio, 626
+- Templo da Carne Marcos Bassi: churrascaria sofisticada - Rua Treze de Maio, 668
+- Cantina C Que Sabe: italiano desde 1931 - Rua Rui Barbosa, 192
+- Amazonia Casa Brasileira: culinaria paraense - Rua Rui Barbosa, 218
+- Coco Bambu Conceito: frutos do mar - Patio Paulista (600m do hotel)
+
+Bairro da Liberdade (10 minutos a pe):
+- Diversas opcoes de culinaria japonesa, chinesa e coreana na Rua Galvao Bueno
+
+Avenida Paulista (15 minutos a pe ou 5 minutos de metro):
+- Cafe Creme: cafe e refeicoes desde 1988 - Av. Paulista, 807
+- Cafe Mestico: culinaria asiatica - Av. Paulista, 508
+
 REGRAS PARA RESERVAS:
-Quando o hóspede informar as datas, gere o link substituindo as datas no formato DD-MM-YYYY.
+Quando o hospede informar as datas, gere o link substituindo as datas no formato DD-MM-YYYY.
 Exemplo: check-in 16/05 e check-out 18/05:
 https://book.omnibees.com/hotel/18555?checkIn=16-05-2026&checkOut=18-05-2026&currencyId=16&lang=pt-BR
 
@@ -25,11 +82,11 @@ Responda assim quando tiver as datas:
 Acesse o link para ver disponibilidade e reservar: https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR
 
 OUTRAS REGRAS:
-- Seja educado, formal e simpático
-- Use no máximo 1 emoji por mensagem
-- Nunca invente informações
-- Se não souber responder diga: Aguarde um momento, um atendente irá lhe responder em breve.
-- Não responda sobre assuntos não relacionados ao hotel
+- Seja educado, formal e simpatico
+- Use no maximo 1 emoji por mensagem
+- Nunca invente informacoes
+- Se nao souber responder diga: Aguarde um momento, um atendente ira lhe responder em breve.
+- Nao responda sobre assuntos nao relacionados ao hotel
 - Mantenha respostas CURTAS e DIRETAS`;
 
 async function perguntarIA(numero, mensagem) {
@@ -73,6 +130,24 @@ app.post('/webhook', async (req, res) => {
   const mensagem = req.body.Body || '';
   const numero = req.body.From || '';
   console.log('Mensagem de ' + numero + ': ' + mensagem);
+
+  if (ultimaMensagem[numero]) clearTimeout(ultimaMensagem[numero]);
+
+  ultimaMensagem[numero] = setTimeout(async () => {
+    try {
+      const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      await twilio.messages.create({
+        from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER,
+        to: numero,
+        body: 'Olá! Esperamos ter ajudado. Sua duvida foi resolvida? Caso precise de mais informacoes ou queira fazer uma reserva, estamos a disposicao. Sera um prazer recebe-lo no Cardim Plaza Hotel!'
+      });
+      console.log('Mensagem proativa enviada para ' + numero);
+    } catch(e) {
+      console.error('Erro proativa:', e.message);
+    }
+    delete ultimaMensagem[numero];
+  }, 5 * 60 * 1000);
+
   try {
     const resposta = await perguntarIA(numero, mensagem);
     console.log('Resposta: ' + resposta);
