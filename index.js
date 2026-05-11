@@ -70,6 +70,9 @@ REGRAS GERAIS:
 - Nao responda sobre assuntos nao relacionados ao hotel`;
 
 function getHora() {
+  return new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+}
+function getHoraOLD() {
   const agora = new Date();
   return agora.getHours().toString().padStart(2,'0') + ':' + agora.getMinutes().toString().padStart(2,'0');
 }
