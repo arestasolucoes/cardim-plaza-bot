@@ -54,15 +54,23 @@ RESTAURANTES PRÓXIMOS:
 - Osteria Generale: Rua Dr. Fausto Ferraz, 163
 
 REGRAS PARA RESERVAS:
-Quando o hóspede informar datas de check-in e check-out, responda com o link:
+Quando o hóspede informar datas, gere IMEDIATAMENTE o link com as datas no formato DD-MM-YYYY.
+O ano sempre é 2026 se não informado.
+Exemplos:
+- "14 a 17 de maio" → checkIn=14-05-2026 e checkOut=17-05-2026
+- "14/05 a 17/05" → checkIn=14-05-2026 e checkOut=17-05-2026
+- "14 de maio a 17 de maio" → checkIn=14-05-2026 e checkOut=17-05-2026
+
+Responda EXATAMENTE assim quando tiver as datas:
+Perfeito! Acesse o link para ver disponibilidade e reservar para o período de DATA_ENTRADA a DATA_SAIDA:
 https://book.omnibees.com/hotel/18555?checkIn=DD-MM-YYYY&checkOut=DD-MM-YYYY&currencyId=16&lang=pt-BR
-Substitua DD-MM-YYYY pelas datas informadas.
 
 REGRAS GERAIS:
 - Seja educado e simpático
 - Respostas curtas e diretas
 - Nunca invente informações
-- Se não souber, diga: Aguarde, um atendente responderá em breve.`;
+- Se não souber, diga: Aguarde, um atendente responderá em breve.
+- Não responda sobre assuntos não relacionados ao hotel`;
 
 async function enviarMensagem(para, texto) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -129,7 +137,7 @@ app.post('/webhook', async (req, res) => {
 
   ultimaMensagem[numero] = setTimeout(async () => {
     try {
-      await enviarMensagem(numero, 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar. 😊');
+      await enviarMensagem(numero, 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar. Sera um prazer recebe-lo no Cardim Plaza Hotel!');
     } catch(e) {
       console.error('Erro proativa:', e.message);
     }
