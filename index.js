@@ -30,12 +30,12 @@ METRÔ PRÓXIMO:
 
 AEROPORTOS:
 - Aeroporto de Congonhas (voos domésticos): 8 km, 15 minutos de carro ou Uber
-- Aeroporto de Guarulhos (voos internacionais e domésticos): 40 km, 40 a 60 minutos de carro. Opção econômica: metrô Linha 1 até a Estação Luz + Expresso Aeroporto (R$5,20)
+- Aeroporto de Guarulhos (voos internacionais e domésticos): 40 km, 40 a 60 minutos de carro. Opção econômica: metrô Linha 1 até a Estação Luz mais Expresso Aeroporto (R$5,20)
 
 RODOVIÁRIAS:
-- Terminal Rodoviário do Tietê (maior rodoviária da América Latina): 8 km, 20 minutos de carro. Opção econômica: metrô Linha 1 até Estação Tietê
+- Terminal Rodoviário do Tietê: 8 km, 20 minutos de carro. Opção econômica: metrô Linha 1 até Estação Tietê
 - Terminal Rodoviário da Barra Funda: 10 km, 20 minutos de carro. Opção econômica: metrô Linha 1 até Estação Barra Funda
-- Terminal Rodoviário do Jabaquara (ônibus para o litoral): 12 km, 25 minutos de carro. Opção econômica: metrô Linha 1 até Estação Jabaquara
+- Terminal Rodoviário do Jabaquara: 12 km, 25 minutos de carro. Opção econômica: metrô Linha 1 até Estação Jabaquara
 
 PONTOS TURÍSTICOS PRÓXIMOS:
 - Avenida Paulista: 1,5 km (15 minutos a pé ou 5 minutos de metrô)
@@ -117,15 +117,6 @@ async function perguntarIA(numero, mensagem) {
   return resposta;
 }
 
-function escaparXML(texto) {
-  return texto
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
 app.post('/webhook', async (req, res) => {
   const mensagem = req.body.Body || '';
   const numero = req.body.From || '';
@@ -139,9 +130,8 @@ app.post('/webhook', async (req, res) => {
       await twilio.messages.create({
         from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER,
         to: numero,
-        body: 'Olá! Esperamos ter ajudado. Sua duvida foi resolvida? Caso precise de mais informacoes ou queira fazer uma reserva, estamos a disposicao. Sera um prazer recebe-lo no Cardim Plaza Hotel!'
+        body: 'Esperamos ter ajudado! Sua duvida foi resolvida? Estamos a disposicao para o que precisar.'
       });
-      console.log('Mensagem proativa enviada para ' + numero);
     } catch(e) {
       console.error('Erro proativa:', e.message);
     }
@@ -151,9 +141,10 @@ app.post('/webhook', async (req, res) => {
   try {
     const resposta = await perguntarIA(numero, mensagem);
     console.log('Resposta: ' + resposta);
-    const respostaSegura = escaparXML(resposta);
     res.set('Content-Type', 'text/xml');
-    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Message>' + respostaSegura + '</Message></Response>');
+    res.type('text/xml');
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message><![CDATA[${resposta}]]></Message></Response>`;
+    res.send(xml);
   } catch(e) {
     console.error('Erro:', e.message);
     res.set('Content-Type', 'text/xml');
