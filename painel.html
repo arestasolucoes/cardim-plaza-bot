@@ -206,6 +206,9 @@
       <label>Senha</label>
       <input type="password" id="login-pass" placeholder="••••••••">
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6B7280;margin-top:4px;cursor:pointer;">
+      <input type="checkbox" id="lembrar" style="width:16px;height:16px;cursor:pointer;"> Lembrar login
+    </label>
     <button class="login-btn" onclick="fazerLogin()">Entrar</button>
     <p class="login-error" id="login-error">Email ou senha incorretos.</p>
   </div>
@@ -361,10 +364,29 @@ let atalhos = [
   { cmd: 'aguarde', desc: 'Aguardar', texto: 'Obrigado pelo contato! Vou verificar essa informação e retorno em instantes. Por favor, aguarde.' },
 ];
 
+// Auto-preencher login salvo
+window.addEventListener('load', () => {
+  const salvo = localStorage.getItem('aresta_login');
+  if (salvo) {
+    try {
+      const { email, senha } = JSON.parse(salvo);
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-pass').value = senha;
+      document.getElementById('lembrar').checked = true;
+      fazerLogin();
+    } catch(e) {}
+  }
+});
+
 function fazerLogin() {
   const email = document.getElementById('login-email').value;
   const senha = document.getElementById('login-pass').value;
   if (email === EMAIL && senha === SENHA) {
+    if (document.getElementById('lembrar').checked) {
+      localStorage.setItem('aresta_login', JSON.stringify({ email, senha }));
+    } else {
+      localStorage.removeItem('aresta_login');
+    }
     document.getElementById('login-screen').style.display = 'none';
     logado = true;
     renderAtalhos();
