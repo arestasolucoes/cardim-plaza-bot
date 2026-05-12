@@ -8,8 +8,28 @@ const conversas = {};
 const ultimaMensagem = {};
 const historicoParaPainel = {};
 const modosHumanos = {};
+const primeirasMensagens = {};
+
+const MENSAGEM_BOAS_VINDAS = `Olá! Seja muito bem-vindo ao *Cardim Plaza Hotel*! 🏨
+
+Sou o *Cardim*, assistente virtual do hotel. Estou aqui para tornar sua experiência ainda mais especial!
+
+Como posso te ajudar hoje?
+
+1️⃣ *Atendimento pelo assistente virtual* — Tire dúvidas sobre reservas, check-in, localização, restaurantes e muito mais na hora!
+
+2️⃣ *Falar com nossa equipe* — Prefere o atendimento humano? Um de nossos atendentes estará com você em instantes.
+
+Escolha a opção que preferir ou simplesmente me conte o que precisa! 😊`;
 
 const SYSTEM_PROMPT = `Você é o assistente virtual do Cardim Plaza Hotel. Seu nome é Cardim. Atenda com cordialidade e profissionalismo.
+
+IMPORTANTE — PRIMEIRA INTERAÇÃO:
+Quando o hóspede responder "2" ou pedir atendimento humano ou falar com atendente, responda EXATAMENTE:
+"Claro! Estou avisando nossa equipe. Um atendente entrará em contato com você em instantes. Obrigado pela preferência pelo Cardim Plaza Hotel! 😊"
+E então encerre sua participação nessa conversa.
+
+Se o hóspede responder "1" ou qualquer outra coisa, atenda normalmente com as informações abaixo.
 
 INFORMAÇÕES DO HOTEL:
 - Endereço: Rua Maestro Cardim, 508 - Bela Vista, São Paulo/SP
@@ -73,10 +93,6 @@ REGRAS GERAIS:
 function getHora() {
   return new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
 }
-function getHoraOLD() {
-  const agora = new Date();
-  return agora.getHours().toString().padStart(2,'0') + ':' + agora.getMinutes().toString().padStart(2,'0');
-}
 
 function salvarNoPainel(numero, role, content) {
   if (!historicoParaPainel[numero]) historicoParaPainel[numero] = [];
@@ -129,11 +145,7 @@ app.get('/conversas', (req, res) => {
 
 app.post('/modo-humano', (req, res) => {
   const { numero, ativo } = req.body;
-  if (ativo) {
-    modosHumanos[numero] = true;
-  } else {
-    delete modosHumanos[numero];
-  }
+  if (ativo) { modosHumanos[numero] = true; } else { delete modosHumanos[numero]; }
   console.log('Modo humano ' + (ativo ? 'ATIVADO' : 'DESATIVADO') + ' para ' + numero);
   res.json({ ok: true });
 });
@@ -156,6 +168,25 @@ app.post('/webhook', async (req, res) => {
 
   salvarNoPainel(numero, 'user', mensagem);
   res.status(200).send('OK');
+
+  // Primeira mensagem do hóspede — envia boas-vindas
+  if (!primeirasMensagens[numero]) {
+    primeirasMensagens[numero] = true;
+    await enviarMensagem(numero, MENSAGEM_BOAS_VINDAS);
+    salvarNoPainel(numero, 'assistant', MENSAGEM_BOAS_VINDAS);
+    return;
+  }
+
+  // Se hóspede escolheu atendimento humano
+  const msgLower = mensagem.toLowerCase().trim();
+  if (msgLower === '2' || msgLower.includes('atendente') || msgLower.includes('humano') || msgLower.includes('pessoa') || msgLower.includes('falar com')) {
+    modosHumanos[numero] = true;
+    const aviso = 'Claro! Estou avisando nossa equipe. Um atendente entrara em contato com voce em instantes. Obrigado pela preferencia pelo Cardim Plaza Hotel!';
+    await enviarMensagem(numero, aviso);
+    salvarNoPainel(numero, 'assistant', aviso);
+    console.log('Modo humano ativado automaticamente para ' + numero);
+    return;
+  }
 
   if (modosHumanos[numero]) {
     console.log('Modo humano ativo para ' + numero + ' — robô não responde');
