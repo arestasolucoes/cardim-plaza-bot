@@ -217,3 +217,94 @@ app.post('/webhook', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Servidor rodando na porta ' + PORT));
+
+// ==========================================
+// INSTAGRAM DM
+// ==========================================
+
+// Verificação do webhook pelo Meta
+app.get('/webhook-instagram', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode === 'subscribe' && token === 'aresta2026') {
+    console.log('Instagram webhook verificado!');
+    res.status(200).send(challenge);
+  } else {
+    res.status(403).send('Token inválido');
+  }
+});
+
+// Receber mensagens do Instagram
+app.post('/webhook-instagram', async (req, res) => {
+  res.status(200).send('OK');
+
+  try {
+    const body = req.body;
+    if (body.object !== 'instagram') return;
+
+    for (const entry of body.entry || []) {
+      for (const event of entry.messaging || []) {
+        if (!event.message || event.message.is_echo) continue;
+
+        const senderId = event.sender.id;
+        const mensagem = event.message.text;
+
+        if (!mensagem) continue;
+
+        console.log('Instagram DM de ' + senderId + ': ' + mensagem);
+
+        const numeroInsta = 'instagram:' + senderId;
+        salvarNoPainel(numeroInsta, 'user', mensagem);
+
+        if (modosHumanos[numeroInsta]) {
+          console.log('Modo humano ativo para ' + numeroInsta);
+          continue;
+        }
+
+        // Primeira mensagem — boas vindas
+        if (!primeirasMensagens[numeroInsta]) {
+          primeirasMensagens[numeroInsta] = true;
+          const boasVindas = 'Olá! Seja bem-vindo ao Cardim Plaza Hotel! 🏨 Sou o Cardim, seu assistente virtual. Como posso ajudar você hoje? Posso informar sobre reservas, check-in, localização e muito mais!';
+          await enviarMensagemInstagram(senderId, boasVindas);
+          salvarNoPainel(numeroInsta, 'assistant', boasVindas);
+          continue;
+        }
+
+        // Pedido de atendimento humano
+        const msgLower = mensagem.toLowerCase().trim();
+        if (msgLower.includes('atendente') || msgLower.includes('humano') || msgLower.includes('pessoa')) {
+          modosHumanos[numeroInsta] = true;
+          const aviso = 'Claro! Um atendente entrará em contato em instantes. Obrigado!';
+          await enviarMensagemInstagram(senderId, aviso);
+          salvarNoPainel(numeroInsta, 'assistant', aviso);
+          continue;
+        }
+
+        // IA responde
+        const resposta = await perguntarIA(numeroInsta, mensagem);
+        salvarNoPainel(numeroInsta, 'assistant', resposta);
+        await enviarMensagemInstagram(senderId, resposta);
+      }
+    }
+  } catch(e) {
+    console.error('Erro Instagram:', e.message);
+  }
+});
+
+async function enviarMensagemInstagram(recipientId, texto) {
+  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
+  const response = await fetch('https://graph.facebook.com/v19.0/me/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipient: { id: recipientId },
+      message: { text: texto },
+      access_token: token
+    })
+  });
+  const data = await response.json();
+  console.log('Instagram envio:', response.status, JSON.stringify(data).substring(0, 200));
+  return data;
+}
