@@ -295,7 +295,8 @@ app.post('/webhook-instagram', async (req, res) => {
 
 async function enviarMensagemInstagram(recipientId, texto) {
   const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const response = await fetch('https://graph.facebook.com/v19.0/me/messages', {
+  const igPageId = process.env.INSTAGRAM_PAGE_ID || '17841407256939308';
+  const response = await fetch(`https://graph.facebook.com/v19.0/${igPageId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
