@@ -77,6 +77,23 @@
   .conv-time { font-size: 11px; color: var(--muted); }
   .bot-tag { background: rgba(16,185,129,0.1); color: var(--green); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 600; }
   .human-tag { background: rgba(184,150,46,0.15); color: var(--gold); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 600; }
+  .reservou-tag { background: rgba(16,185,129,0.15); color: #059669; border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 600; }
+  .btn-reservou { background: none; border: 1px solid var(--green); color: var(--green); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 600; cursor: pointer; }
+  .btn-reservou:active { background: rgba(16,185,129,0.1); }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 998; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: white; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .modal-field input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 16px; outline: none; }
+  .modal-field input:focus { border-color: var(--navy); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 4px; }
+  .modal-btn-cancel { flex: 1; padding: 12px; background: var(--bg); color: var(--muted); border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .modal-btn-confirm { flex: 1; padding: 12px; background: var(--green); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
 
   /* CHAT AREA */
   .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -190,6 +207,26 @@
 </style>
 </head>
 <body>
+
+<!-- MODAL RESERVA -->
+<div class="modal-overlay" id="modal-reserva">
+  <div class="modal-box">
+    <div class="modal-title">✅ Registrar Reserva</div>
+    <div class="modal-sub" id="modal-numero-hospede"></div>
+    <div class="modal-field">
+      <label>Número da Reserva</label>
+      <input type="text" id="modal-num-reserva" placeholder="ex: RES-2026-001">
+    </div>
+    <div class="modal-field">
+      <label>Valor Total (R$)</label>
+      <input type="number" id="modal-valor" placeholder="ex: 540.00" step="0.01">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="modal-btn-confirm" onclick="confirmarReserva()">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -351,6 +388,8 @@ const EMAIL = 'gerencia@cardimplaza.com.br';
 const SENHA = 'Cardim2026';
 let dadosServidor = {}, modosHumanos = {}, conversaAtiva = null, logado = false;
 let chartConversas = null, chartHoras = null;
+let reservas = {};
+let modalNumero = null;
 const isMobile = () => window.innerWidth <= 640;
 
 let atalhos = [
@@ -449,6 +488,7 @@ function renderConversas(filtro='') {
       </div>
       <div class="conv-meta">
         <div class="conv-time">${ultima?ultima.hora:''}</div>
+        ${reservas[numero] ? `<span class="reservou-tag">✅ R$${reservas[numero].valor}</span>` : `<button class="btn-reservou" onclick="event.stopPropagation();abrirModal('${numero}')">+ Reservou</button>`}
         ${modoH?'<span class="human-tag">HUMANO</span>':'<span class="bot-tag">ROBÔ</span>'}
       </div>`;
     lista.appendChild(item);
@@ -576,6 +616,30 @@ function removerAtalho(i) {
   atalhos.splice(i,1); renderAtalhos();
 }
 
+function abrirModal(numero) {
+  modalNumero = numero;
+  document.getElementById('modal-numero-hospede').textContent = 'Hóspede: ' + numero.replace('whatsapp:','');
+  document.getElementById('modal-num-reserva').value = '';
+  document.getElementById('modal-valor').value = '';
+  document.getElementById('modal-reserva').classList.add('open');
+  setTimeout(() => document.getElementById('modal-num-reserva').focus(), 100);
+}
+
+function fecharModal() {
+  document.getElementById('modal-reserva').classList.remove('open');
+  modalNumero = null;
+}
+
+function confirmarReserva() {
+  const numReserva = document.getElementById('modal-num-reserva').value.trim();
+  const valor = parseFloat(document.getElementById('modal-valor').value);
+  if (!numReserva) { alert('Informe o número da reserva.'); return; }
+  if (!valor || valor <= 0) { alert('Informe um valor válido.'); return; }
+  reservas[modalNumero] = { numReserva, valor: valor.toFixed(2), data: new Date().toLocaleDateString('pt-BR') };
+  fecharModal();
+  renderConversas(document.getElementById('search-input').value);
+}
+
 function calcularEstatisticas() {
   const todos = Object.values(dadosServidor);
   const total = todos.length;
@@ -585,6 +649,12 @@ function calcularEstatisticas() {
   let links = 0;
   const horaCount = Array(24).fill(0);
   const topicos = { 'Reservas': 0, 'Check-in/out': 0, 'Restaurantes': 0, 'Hospitais': 0, 'Estacionamento': 0, 'Wi-Fi': 0, 'Aeroporto': 0, 'Outros': 0 };
+
+  // Dados de reservas confirmadas
+  const totalReservas = Object.keys(reservas).length;
+  const receitaTotal = Object.values(reservas).reduce((sum, r) => sum + parseFloat(r.valor), 0);
+  const ticketMedio = totalReservas > 0 ? receitaTotal / totalReservas : 0;
+
   todos.forEach(msgs => {
     msgs.forEach(m => {
       if (m.role==='user') {
@@ -603,7 +673,7 @@ function calcularEstatisticas() {
       if (m.role==='assistant' && m.content.includes('omnibees.com')) links++;
     });
   });
-  return { total, robo, humano, pct, links, horaCount, topicos };
+  return { total, robo, humano, pct, links, horaCount, topicos, totalReservas, receitaTotal, ticketMedio };
 }
 
 function atualizarRelatorio() {
@@ -614,6 +684,23 @@ function atualizarRelatorio() {
   document.getElementById('stat-robo').textContent = stats.pct + '%';
   document.getElementById('stat-humano').textContent = stats.humano;
   document.getElementById('stat-links').textContent = stats.links;
+
+  // Cards de reservas
+  const statsGrid = document.querySelector('.stats-grid');
+  const reservaCards = document.getElementById('reserva-cards');
+  if (!reservaCards) {
+    const extra = document.createElement('div');
+    extra.id = 'reserva-cards';
+    extra.style = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;';
+    extra.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">🏨</div><div class="stat-value" id="stat-reservas">${stats.totalReservas}</div><div class="stat-label">Reservas confirmadas</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" style="font-size:20px" id="stat-receita">R$${stats.receitaTotal.toFixed(2)}</div><div class="stat-label">Receita gerada</div><div class="stat-change" id="stat-ticket">Ticket médio: R$${stats.ticketMedio.toFixed(2)}</div></div>`;
+    statsGrid.after(extra);
+  } else {
+    document.getElementById('stat-reservas').textContent = stats.totalReservas;
+    document.getElementById('stat-receita').textContent = 'R$' + stats.receitaTotal.toFixed(2);
+    document.getElementById('stat-ticket').textContent = 'Ticket médio: R$' + stats.ticketMedio.toFixed(2);
+  }
   const labels = [], dataConv = [];
   for (let i=dias-1; i>=0; i--) {
     const d = new Date(); d.setDate(d.getDate()-i);
@@ -644,12 +731,120 @@ function atualizarRelatorio() {
 
 function exportarRelatorio() {
   const stats = calcularEstatisticas();
-  const txt = `RELATÓRIO ARESTA FLOW — CARDIM PLAZA HOTEL\nData: ${new Date().toLocaleDateString('pt-BR')}\n\nRESUMO\nConversas: ${stats.total}\nResolvidas pelo robô: ${stats.pct}% (${stats.robo})\nAtendidas por humano: ${stats.humano}\nLinks de reserva enviados: ${stats.links}\n\nASSUNTOS\n${Object.entries(stats.topicos).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`- ${k}: ${v}`).join('\n')}\n\nGerado pelo Aresta Flow — Aresta Hotelaria`;
-  const blob = new Blob([txt], {type:'text/plain'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'relatorio-cardim-' + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + '.txt';
-  a.click();
+  const agora = new Date().toLocaleDateString('pt-BR');
+  const reservasList = Object.entries(reservas).map(([num, r]) =>
+    `<tr><td>${num.replace('whatsapp:','')}</td><td>${r.numReserva}</td><td>R$ ${r.valor}</td><td>${r.data}</td></tr>`
+  ).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório — Cardim Plaza Hotel</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1A1A2E; background: white; padding: 40px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 3px solid #B8962E; }
+  .header-title h1 { font-size: 24px; font-weight: 700; color: #1A2F5E; }
+  .header-title h1 span { color: #B8962E; }
+  .header-title p { font-size: 13px; color: #6B7280; margin-top: 4px; }
+  .header-info { text-align: right; font-size: 13px; color: #6B7280; }
+  .header-info strong { display: block; font-size: 15px; color: #1A2F5E; }
+  .section-title { font-size: 14px; font-weight: 700; color: #1A2F5E; text-transform: uppercase; letter-spacing: 0.5px; margin: 28px 0 14px; padding-bottom: 6px; border-bottom: 2px solid #E2E5EC; }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 8px; }
+  .stats-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .stat-box { background: #F4F5F7; border-radius: 10px; padding: 16px; border-left: 4px solid #1A2F5E; }
+  .stat-box.gold { border-left-color: #B8962E; }
+  .stat-box.green { border-left-color: #10B981; }
+  .stat-value { font-size: 28px; font-weight: 700; color: #1A2F5E; }
+  .stat-label { font-size: 12px; color: #6B7280; margin-top: 2px; }
+  .stat-sub { font-size: 11px; color: #10B981; font-weight: 600; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { background: #1A2F5E; color: white; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; }
+  td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #E2E5EC; }
+  tr:nth-child(even) td { background: #F9FAFB; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-label { font-size: 12px; color: #1A1A2E; min-width: 110px; }
+  .bar-bg { flex: 1; height: 10px; background: #E2E5EC; border-radius: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #1A2F5E; border-radius: 5px; }
+  .bar-fill.gold { background: #B8962E; }
+  .bar-count { font-size: 12px; font-weight: 600; color: #1A2F5E; min-width: 24px; text-align: right; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #E2E5EC; display: flex; justify-content: space-between; font-size: 11px; color: #6B7280; }
+  .empty-msg { font-size: 13px; color: #6B7280; padding: 12px 0; }
+  @media print { body { padding: 20px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title">
+    <h1>Aresta <span>Flow</span></h1>
+    <p>Relatório de Atendimento — Cardim Plaza Hotel</p>
+  </div>
+  <div class="header-info">
+    <strong>Cardim Plaza Hotel</strong>
+    Emitido em ${agora}
+  </div>
+</div>
+
+<div class="section-title">📊 Resumo de Atendimentos</div>
+<div class="stats-grid">
+  <div class="stat-box">
+    <div class="stat-value">${stats.total}</div>
+    <div class="stat-label">Total de conversas</div>
+  </div>
+  <div class="stat-box green">
+    <div class="stat-value">${stats.pct}%</div>
+    <div class="stat-label">Resolvidas pelo robô</div>
+    <div class="stat-sub">${stats.robo} conversas sem intervenção</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-value">${stats.humano}</div>
+    <div class="stat-label">Atendidas por humano</div>
+  </div>
+</div>
+
+<div class="section-title">💰 Reservas Confirmadas</div>
+<div class="stats-grid-2">
+  <div class="stat-box gold">
+    <div class="stat-value">${stats.totalReservas}</div>
+    <div class="stat-label">Reservas registradas</div>
+  </div>
+  <div class="stat-box gold">
+    <div class="stat-value">R$ ${stats.receitaTotal.toFixed(2)}</div>
+    <div class="stat-label">Receita gerada</div>
+    <div class="stat-sub">Ticket médio: R$ ${stats.ticketMedio.toFixed(2)}</div>
+  </div>
+</div>
+
+${stats.totalReservas > 0 ? `
+<div class="section-title">🏨 Detalhes das Reservas</div>
+<table>
+  <thead><tr><th>Hóspede</th><th>Nº Reserva</th><th>Valor</th><th>Data</th></tr></thead>
+  <tbody>${reservasList}</tbody>
+</table>` : '<div class="empty-msg">Nenhuma reserva registrada no período.</div>'}
+
+<div class="section-title">🔍 Assuntos Mais Perguntados</div>
+${Object.entries(stats.topicos).sort((a,b)=>b[1]-a[1]).filter(([,v])=>v>0).map(([nome, count], i) => {
+  const max = Math.max(...Object.values(stats.topicos));
+  const pct = max > 0 ? Math.round((count/max)*100) : 0;
+  return `<div class="bar-row">
+    <span class="bar-label">${nome}</span>
+    <div class="bar-bg"><div class="bar-fill ${i<3?'':'gold'}" style="width:${pct}%"></div></div>
+    <span class="bar-count">${count}</span>
+  </div>`;
+}).join('') || '<div class="empty-msg">Nenhuma conversa registrada.</div>'}
+
+<div class="footer">
+  <span>Aresta Flow — Aresta Hotelaria</span>
+  <span>Relatório gerado automaticamente em ${agora}</span>
+</div>
+</body>
+</html>`;
+
+  const janela = window.open('', '_blank');
+  janela.document.write(html);
+  janela.document.close();
+  setTimeout(() => janela.print(), 500);
 }
 
 function iniciarPolling() {
